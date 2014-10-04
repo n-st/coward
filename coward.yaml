@@ -22,8 +22,8 @@ prune:
         mountpoint:     /btrfs
         dir:            snapshots/rootfs
         keep:
-            - .+_08:.*:           8
-            - .+_(02|14|20):.*:   9
+            .+_08:.*:           8
+            .+_(02|14|20):.*:   9
 
 push:
     rootfs:

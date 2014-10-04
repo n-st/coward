@@ -2,6 +2,7 @@
 
 import sys
 import os
+import re
 import subprocess
 import argparse
 import yaml
@@ -36,9 +37,49 @@ def command_prune(params):
     global config
     global simulate
 
+    if not 'prune' in config:
+        raise Exception('The config file doesn\'t contain any prune targets.')
+
+    prunings = config['prune']
+
     if params:
-        pass
-    pass
+        targets = params.split(',')
+    else:
+        targets = prunings.keys()
+
+    for target in targets:
+        if target not in prunings.keys():
+            raise Exception('The prune target \'%s\' does not exist.' % target)
+
+        mountpoint = prunings[target]['mountpoint']
+        directory = prunings[target]['dir']
+
+        subvolumes = btrfs_subvolume_list(mountpoint)
+        subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        subvolumes.sort(reverse=True)
+
+        keep = []
+        regexes = prunings[target]['keep']
+
+        for regex in regexes.keys():
+            keepcount = regexes[regex]
+
+            # search for subvolumes that match the regex, then keep the first <keepcount> of them
+            matches = [x for x in subvolumes if re.search(regex, x)][:keepcount]
+
+            keep += matches
+
+        subvolumes_to_delete = set(subvolumes) - set(keep)
+
+        # sort set so oldest subvolumes are deleted first
+        # -> more time to press Ctrl+C ;)
+        for subvolume in sorted(subvolumes_to_delete):
+            exec_cmd = 'btrfs subvolume delete ' + os.path.join(mountpoint, subvolume)
+
+            if simulate:
+                print(exec_cmd)
+            else:
+                pass
 
 
 def command_push(params):
