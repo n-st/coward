@@ -158,6 +158,9 @@ def main():
     args = parser.parse_args()
     commands = [x.split(':') for x in args.commands]
 
+    if os.geteuid() != 0:
+        raise Exception('You need to have root privileges to run this script.')
+
     # terminate on invalid parameters
     for command in commands:
         if command[0] not in VALID_COMMANDS:
