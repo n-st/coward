@@ -2,6 +2,7 @@
 
 import sys
 import os
+import subprocess
 import argparse
 import yaml
 from time import strftime
@@ -10,6 +11,17 @@ import textwrap
 
 VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push']
 DEFAULT_CONFIG_FILE = '/etc/coward.yaml'
+
+
+def btrfs_subvolume_list(mountpoint):
+    # 'btrfs su li <path>' outputs something like
+    # ID 305 gen 18482 top level 5 path @rootfs
+
+    exec_cmd = ['btrfs', 'subvolume', 'list', mountpoint]
+    output = subprocess.check_output(exec_cmd, stderr=subprocess.STDOUT)
+    subvolumes = [x.split(' ')[8] for x in output.splitlines()]
+
+    return subvolumes
 
 
 def command_all(params):
