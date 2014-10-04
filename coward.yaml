@@ -1,0 +1,31 @@
+# example invocations:
+#   coward all
+#   coward snapshot
+#   coward snapshot:rootfs
+#   coward snapshot:rootfs,home
+#   coward snapshot prune push
+#   coward snapshot:rootfs prune:home
+# optionally use -c <path> to specify a non-default config file
+
+snapshot:
+    rootfs:
+        src:    /btrfs/@rootfs
+        dest:   /btrfs/snapshots/rootfs/%F_%T_%a
+    home:
+        src:    /btrfs/@home
+        dest:   /btrfs/snapshots/home/%F_%T_%a
+
+prune:
+    rootfs:
+        mountpoint:     /btrfs
+        dir:            snapshots/rootfs
+        keep:
+            - .+_08:.*:           8
+            - .+_(02|14|20):.*:   9
+
+push:
+    rootfs:
+        src-mountpoint: /btrfs
+        src-dir:        snapshots/rootfs
+        dest-server:    backup.voidptr.de
+        dest-dir:       /btrfs/snapshots/zeta/rootfs/
