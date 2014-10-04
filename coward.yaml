@@ -9,11 +9,13 @@
 
 snapshot:
     rootfs:
-        src:    /btrfs/@rootfs
-        dest:   /btrfs/snapshots/rootfs/%F_%T_%a
+        src:        /btrfs/@rootfs
+        dest:       /btrfs/snapshots/rootfs/%F_%T_%a
+        readonly:   true
     home:
-        src:    /btrfs/@home
-        dest:   /btrfs/snapshots/home/%F_%T_%a
+        src:        /btrfs/@home
+        dest:       /btrfs/snapshots/home/%F_%T_%a
+        readonly:   true
 
 prune:
     rootfs:
