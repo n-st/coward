@@ -5,6 +5,7 @@ import os
 import argparse
 import yaml
 from time import strftime
+import textwrap
 
 
 VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push']
@@ -79,7 +80,24 @@ def main():
     global config
     global simulate
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+            prog='coward',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description='coward: automate btrfs backups',
+            epilog=textwrap.dedent('''\
+                Supported commands:
+                    all:        Run 'snapshot', 'push' and 'prune' for all respective
+                                targets (in this order).
+                    snapshot:   Create btrfs snapshots for the specified targets.
+                    push:       Copy snapshots using 'btrfs send/receive'.
+                    prune:      Delete snapshots according to the target's 'keep'
+                                configuration ("keep the last n snapshots matching
+                                this regex").
+
+                Targets are always specified in the form 'command:target1,target2'.
+                If no targets are specified, all targets for the selected command are
+                processed.''')
+            )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
     parser.add_argument('commands', nargs='+')
