@@ -32,6 +32,10 @@ def command_all(params):
     if params:
         raise Exception('The command \'all\' does not expect any parameters, but got \'%s\'.' % str(params))
 
+    command_snapshot(None)
+    command_push(None)
+    command_prune(None)
+
 
 def command_prune(params):
     global config
@@ -56,6 +60,7 @@ def command_prune(params):
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        # newest first
         subvolumes.sort(reverse=True)
 
         keep = []
@@ -74,10 +79,10 @@ def command_prune(params):
         # sort set so oldest subvolumes are deleted first
         # -> more time to press Ctrl+C ;)
         for subvolume in sorted(subvolumes_to_delete):
-            exec_cmd = 'btrfs subvolume delete ' + os.path.join(mountpoint, subvolume)
+            exec_cmd = ['btrfs', 'subvolume', 'delete', os.path.join(mountpoint, subvolume)]
 
             if simulate:
-                print(exec_cmd)
+                print(' '.join(exec_cmd))
             else:
                 pass
 
@@ -86,10 +91,44 @@ def command_push(params):
     global config
     global simulate
 
+    if not 'push' in config:
+        raise Exception('The config file doesn\'t contain any push targets.')
+
+    push = config['push']
+
     if params:
-        pass
-    print config
-    pass
+        targets = params.split(',')
+    else:
+        targets = push.keys()
+
+    for target in targets:
+        if target not in push.keys():
+            raise Exception('The push target \'%s\' does not exist.' % target)
+
+        mountpoint = push[target]['src-mountpoint']
+        directory = push[target]['src-dir']
+        incremental = push[target]['incremental']
+        regex = push[target]['selection-regex']
+        pushcount = push[target]['selection-count']
+        dest_server = push[target]['dest-server']
+        dest_path = push[target]['dest-path']
+
+        subvolumes = btrfs_subvolume_list(mountpoint)
+        subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        # newest first
+        subvolumes.sort(reverse=True)
+
+        # keep one more subvolume than <pushcount> as a -p reference for incremental copying
+        subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)][:(pushcount+1)]
+
+        for subvolume in subvolumes_to_push:
+            exec_cmd = ['btrfs',  'send', os.path.join(mountpoint, subvolume), \
+                    '|', 'ssh', dest_server, 'btrfs receive ' + dest_path]
+
+            if simulate:
+                print(' '.join(exec_cmd))
+            else:
+                pass
 
 
 def command_snapshot(params):
@@ -117,14 +156,14 @@ def command_snapshot(params):
         else:
             readonly = False
 
-        exec_cmd = \
-                'btrfs subvolume snapshot ' + \
-                ('-r ' if readonly else '') + \
-                src + ' ' + \
-                strftime(dest)
+        exec_cmd = ['btrfs', 'subvolume', 'snapshot']
+        if readonly:
+            exec_cmd.append('-r')
+        exec_cmd.append(src)
+        exec_cmd.append(strftime(dest))
 
         if simulate:
-            print(exec_cmd)
+            print(' '.join(exec_cmd))
         else:
             pass
 

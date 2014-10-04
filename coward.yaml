@@ -27,7 +27,11 @@ prune:
 
 push:
     rootfs:
-        src-mountpoint: /btrfs
-        src-dir:        snapshots/rootfs
-        dest-server:    backup.voidptr.de
-        dest-dir:       /btrfs/snapshots/zeta/rootfs/
+        # copy the <n> latest snapshots that match the regex
+        selection-regex:    .+
+        selection-count:    1
+        incremental:        true
+        src-mountpoint:     /btrfs
+        src-dir:            snapshots/rootfs
+        dest-server:        backup.voidptr.de
+        dest-path:          /btrfs/snapshots/zeta/rootfs/
