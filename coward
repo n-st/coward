@@ -107,7 +107,10 @@ def command_push(params):
 
         mountpoint = push[target]['src-mountpoint']
         directory = push[target]['src-dir']
-        incremental = push[target]['incremental']
+        if 'incremental' in push[target]:
+            incremental = push[target]['incremental']
+        else:
+            incremental = False
         regex = push[target]['selection-regex']
         pushcount = push[target]['selection-count']
         dest_server = push[target]['dest-server']
@@ -121,8 +124,12 @@ def command_push(params):
         # keep one more subvolume than <pushcount> as a -p reference for incremental copying
         subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)][:(pushcount+1)]
 
-        for subvolume in subvolumes_to_push:
-            exec_cmd = ['btrfs',  'send', os.path.join(mountpoint, subvolume), \
+        for i in range(len(subvolumes_to_push) - 1):
+            subvolume = subvolumes_to_push[i]
+            exec_cmd = ['btrfs',  'send']
+            if incremental:
+                exec_cmd += ['-p', subvolumes_to_push[i+1]]
+            exec_cmd += [os.path.join(mountpoint, subvolume), \
                     '|', 'ssh', dest_server, 'btrfs receive ' + dest_path]
 
             if simulate:
