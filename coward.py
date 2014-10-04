@@ -134,9 +134,8 @@ def main():
     global simulate
 
     parser = argparse.ArgumentParser(
-            prog='coward',
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description='coward: automate btrfs backups',
+            description='coward: automate btrfs backups\nRequires root privileges (to run btrfs-progs).',
             epilog=textwrap.dedent('''\
                 Supported commands:
                     all:        Run 'snapshot', 'push' and 'prune' for all respective
