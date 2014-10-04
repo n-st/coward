@@ -10,7 +10,7 @@ from time import strftime
 import textwrap
 
 
-VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push']
+VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push', 'pull']
 DEFAULT_CONFIG_FILE = '/etc/coward.yaml'
 
 
@@ -19,6 +19,17 @@ def btrfs_subvolume_list(mountpoint):
     # ID 305 gen 18482 top level 5 path @rootfs
 
     exec_cmd = ['btrfs', 'subvolume', 'list', mountpoint]
+    output = subprocess.check_output(exec_cmd, stderr=subprocess.STDOUT)
+    subvolumes = [x.split(' ')[8] for x in output.splitlines()]
+
+    return subvolumes
+
+
+def remote_btrfs_subvolume_list(server, mountpoint):
+    # 'btrfs su li <path>' outputs something like
+    # ID 305 gen 18482 top level 5 path @rootfs
+
+    exec_cmd = ['ssh', server, 'btrfs subvolume list ' + mountpoint]
     output = subprocess.check_output(exec_cmd, stderr=subprocess.STDOUT)
     subvolumes = [x.split(' ')[8] for x in output.splitlines()]
 
@@ -59,7 +70,8 @@ def command_prune(params):
         directory = prunings[target]['dir']
 
         subvolumes = btrfs_subvolume_list(mountpoint)
-        subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        if directory:
+            subvolumes = [x for x in subvolumes if x.startswith(directory)]
         # newest first
         subvolumes.sort(reverse=True)
 
@@ -85,6 +97,62 @@ def command_prune(params):
                 print(' '.join(exec_cmd))
             else:
                 pass
+
+
+def command_pull(params):
+    global config
+    global simulate
+
+    if not 'pull' in config:
+        raise Exception('The config file doesn\'t contain any pull targets.')
+
+    pull = config['pull']
+
+    if params:
+        targets = params.split(',')
+    else:
+        targets = pull.keys()
+
+    for target in targets:
+        if target not in pull.keys():
+            raise Exception('The pull target \'%s\' does not exist.' % target)
+
+        src_server = pull[target]['src-server']
+        mountpoint = pull[target]['src-mountpoint']
+        directory = pull[target]['src-dir']
+        if 'incremental' in pull[target]:
+            incremental = pull[target]['incremental']
+        else:
+            incremental = False
+        regex = pull[target]['selection-regex']
+        pullcount = pull[target]['selection-count']
+        dest_path = pull[target]['dest-path']
+
+        subvolumes = remote_btrfs_subvolume_list(src_server, mountpoint)
+        if directory:
+            subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        # newest first
+        subvolumes.sort(reverse=True)
+
+        # keep one more subvolume than <pullcount> as a -p reference for incremental copying
+        subvolumes_to_pull = [x for x in subvolumes if re.search(regex, x)][:(pullcount+1)]
+
+        max_index = len(subvolumes_to_pull) - 1
+        if max_index == 0 and not incremental:
+            max_index = 1
+
+        for i in range(max_index):
+            subvolume = subvolumes_to_pull[i]
+            remote_cmd = 'btrfs send '
+            if incremental:
+                remote_cmd += '-p ' + subvolumes_to_pull[i+1] + ' '
+            remote_cmd += os.path.join(mountpoint, subvolume)
+            exec_cmd = 'ssh %s "%s" | btrfs receive %s' % (src_server, remote_cmd, dest_path)
+
+            if simulate:
+                print(exec_cmd)
+            else:
+                subprocess.check_call(exec_cmd, shell=True)
 
 
 def command_push(params):
@@ -117,25 +185,30 @@ def command_push(params):
         dest_path = push[target]['dest-path']
 
         subvolumes = btrfs_subvolume_list(mountpoint)
-        subvolumes = [x for x in subvolumes if x.startswith(directory)]
+        if directory:
+            subvolumes = [x for x in subvolumes if x.startswith(directory)]
         # newest first
         subvolumes.sort(reverse=True)
 
         # keep one more subvolume than <pushcount> as a -p reference for incremental copying
         subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)][:(pushcount+1)]
 
-        for i in range(len(subvolumes_to_push) - 1):
+        max_index = len(subvolumes_to_push) - 1
+        if max_index == 0 and not incremental:
+            max_index = 1
+
+        for i in range(max_index):
             subvolume = subvolumes_to_push[i]
-            exec_cmd = ['btrfs',  'send']
+            exec_cmd = 'btrfs send '
             if incremental:
-                exec_cmd += ['-p', subvolumes_to_push[i+1]]
-            exec_cmd += [os.path.join(mountpoint, subvolume), \
-                    '|', 'ssh', dest_server, 'btrfs receive ' + dest_path]
+                exec_cmd += '-p ' + subvolumes_to_push[i+1] + ' '
+            exec_cmd += os.path.join(mountpoint, subvolume) + \
+                    ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
 
             if simulate:
-                print(' '.join(exec_cmd))
+                print(exec_cmd)
             else:
-                pass
+                subprocess.check_call(exec_cmd, shell=True)
 
 
 def command_snapshot(params):

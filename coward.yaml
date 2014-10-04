@@ -32,6 +32,35 @@ push:
         selection-count:    1
         incremental:        true
         src-mountpoint:     /btrfs
-        src-dir:            snapshots/rootfs
+        src-dir:            snapshots/rootfs/
         dest-server:        backup.voidptr.de
         dest-path:          /btrfs/snapshots/zeta/rootfs/
+    test:
+        # copy the <n> latest snapshots that match the regex
+        selection-regex:    \.r
+        selection-count:    1
+        #incremental:        true
+        src-mountpoint:     /mnt/wd3
+        src-dir:            
+        dest-server:        phi
+        dest-path:          /mnt/btr-backup/test/
+
+pull:
+    rootfs:
+        # copy the <n> latest snapshots that match the regex
+        selection-regex:    /\d{4}-
+        selection-count:    1
+        #incremental:        true
+        src-server:         phi
+        src-mountpoint:     /mnt/btr-backup
+        src-dir:            snapshots/epsilon/rootfs/
+        dest-path:          /btrfs/snapshots/zeta/rootfs/
+    test:
+        # copy the <n> latest snapshots that match the regex
+        selection-regex:    \.r
+        selection-count:    1
+        #incremental:        true
+        src-server:         phi
+        src-mountpoint:     /mnt/btr-backup
+        src-dir:            test/
+        dest-path:          /mnt/wd3/
