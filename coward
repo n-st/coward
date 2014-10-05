@@ -2,6 +2,7 @@
 
 import sys
 import os
+from os.path import basename
 import re
 import subprocess
 import argparse
@@ -137,10 +138,7 @@ def command_pull(params):
         dest_path = pull[target]['dest-path']
         directory = optional_option(pull[target], 'src-dir', '')
         incremental = optional_option(pull[target], 'incremental', False)
-
-        # Note the inverted logic (include vs. exclude) in contrast to command_push.
-        include_existing = optional_option(pull[target], 'include-existing', False)
-
+        exclude_existing = optional_option(pull[target], 'exclude-existing', True)
         pullcount = optional_option(pull[target], 'selection-count', None)
         regex = optional_option(pull[target], 'selection-regex', '.*')
 
@@ -171,9 +169,9 @@ def command_pull(params):
             subvolume = subvolumes_to_pull[i]
 
             # skip if the current subvolume already exists in dest_path
-            # (unless include_existing is set)
-            subvolume_basename = os.path.basename(subvolume)
-            if not include_existing and os.path.exists(os.path.join(dest_path, subvolume_basename)):
+            # (unless exclude_existing has explicitly been disabled)
+            subvolume_basename = basename(subvolume)
+            if exclude_existing and os.path.exists(os.path.join(dest_path, subvolume_basename)):
                 continue
 
             remote_cmd = 'btrfs send '
@@ -211,13 +209,7 @@ def command_push(params):
         dest_path = push[target]['dest-path']
         directory = optional_option(push[target], 'src-dir', '')
         incremental = optional_option(push[target], 'incremental', False)
-
-        # Note the inverted logic (exclude vs. include) in contrast to command_pull.
-        # Reasoning behind this: Checking for existing snapshots locally is effortless,
-        # but listing a remote directory requires an additional SSH connection and
-        # perhaps additional privileges on the remote system.
         exclude_existing = optional_option(push[target], 'exclude-existing', False)
-
         pushcount = optional_option(push[target], 'selection-count', None)
         regex = optional_option(push[target], 'selection-regex', '.*')
 
