@@ -201,8 +201,8 @@ def command_push(params):
         dest_path = push[target]['dest-path']
         directory = optional_option(push[target], 'src-dir', '')
         incremental = optional_option(push[target], 'incremental', False)
+        pushcount = optional_option(push[target], 'selection-count', None)
         regex = optional_option(push[target], 'selection-regex', '.*')
-        pushcount = push[target]['selection-count']
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -211,19 +211,27 @@ def command_push(params):
         subvolumes.sort(reverse=True)
 
         # keep one more subvolume than <pushcount> as a -p reference for incremental copying
-        subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)][:(pushcount+1)]
+        subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)]
 
-        # if incremental copying is disabled and there is only one snapshot, allow sending that one
-        # in all other cases, ignore the last snapshot since it is only included as a -p reference
-        max_index = len(subvolumes_to_push) - 1
-        if max_index == 0 and not incremental:
-            max_index = 1
+        if pushcount:
+            subvolumes_to_push = subvolumes_to_push[:(pushcount+1)]
 
-        for i in range(max_index):
+        # oldest first
+        subvolumes_to_push.sort()
+
+        # The first element is now either the "reference-only" snapshot or else the only snapshot to be transferred.
+        # Determine which and set the start index accordingly:
+        max_index = len(subvolumes_to_push)
+        if max_index == 1 and not incremental:
+            start_index = 0
+        else:
+            start_index = 1
+
+        for i in range(start_index, max_index):
             subvolume = subvolumes_to_push[i]
             exec_cmd = 'btrfs send '
             if incremental:
-                exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i+1]) + ' '
+                exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i-1]) + ' '
             exec_cmd += os.path.join(mountpoint, subvolume) + \
                     ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
 
