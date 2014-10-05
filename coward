@@ -44,6 +44,7 @@ def command_all(params):
         raise Exception('The command \'all\' does not expect any parameters, but got \'%s\'.' % str(params))
 
     command_snapshot(None)
+    command_pull(None)
     command_push(None)
     command_prune(None)
 
@@ -96,7 +97,7 @@ def command_prune(params):
             if simulate:
                 print(' '.join(exec_cmd))
             else:
-                pass
+                subprocess.check_call(exec_cmd)
 
 
 def command_pull(params):
@@ -137,6 +138,8 @@ def command_pull(params):
         # keep one more subvolume than <pullcount> as a -p reference for incremental copying
         subvolumes_to_pull = [x for x in subvolumes if re.search(regex, x)][:(pullcount+1)]
 
+        # if incremental copying is disabled and there is only one snapshot, allow sending that one
+        # in all other cases, ignore the last snapshot since it is only included as a -p reference
         max_index = len(subvolumes_to_pull) - 1
         if max_index == 0 and not incremental:
             max_index = 1
@@ -193,6 +196,8 @@ def command_push(params):
         # keep one more subvolume than <pushcount> as a -p reference for incremental copying
         subvolumes_to_push = [x for x in subvolumes if re.search(regex, x)][:(pushcount+1)]
 
+        # if incremental copying is disabled and there is only one snapshot, allow sending that one
+        # in all other cases, ignore the last snapshot since it is only included as a -p reference
         max_index = len(subvolumes_to_push) - 1
         if max_index == 0 and not incremental:
             max_index = 1
@@ -245,7 +250,7 @@ def command_snapshot(params):
         if simulate:
             print(' '.join(exec_cmd))
         else:
-            pass
+            subprocess.check_call(exec_cmd)
 
 
 def main():
@@ -257,17 +262,18 @@ def main():
             description='coward: automate btrfs backups\nRequires root privileges (to run btrfs-progs).',
             epilog=textwrap.dedent('''\
                 Supported commands:
-                    all:        Run 'snapshot', 'push' and 'prune' for all respective
+                    all:        Run 'snapshot', 'pull', 'push' and 'prune' for all respective
                                 targets (in this order).
                     snapshot:   Create btrfs snapshots for the specified targets.
-                    push:       Copy snapshots using 'btrfs send/receive'.
-                    prune:      Delete snapshots according to the target's 'keep'
-                                configuration ("keep the last n snapshots matching
-                                this regex").
+                    pull:       Copy snapshots from a remote server using 'btrfs send/receive'
+                                and SSH.
+                    push:       Copy snapshots to a remote server using 'btrfs send/receive'
+                                and SSH.
+                    prune:      Delete snapshots according to the target's 'keep' configuration
+                                ("keep the last n snapshots matching this regex").
 
                 Targets are always specified in the form 'command:target1,target2'.
-                If no targets are specified, all targets for the selected command are
-                processed.''')
+                If no targets are specified, all targets for the selected command are processed.''')
             )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
