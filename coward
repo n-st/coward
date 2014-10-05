@@ -74,6 +74,7 @@ def command_prune(params):
         if target not in prunings.keys():
             raise Exception('The prune target \'%s\' does not exist.' % target)
 
+        regexes = prunings[target]['keep']
         mountpoint = prunings[target]['mountpoint']
         directory = optional_option(prunings[target], 'dir', '')
 
@@ -84,7 +85,6 @@ def command_prune(params):
         subvolumes.sort(reverse=True)
 
         keep = []
-        regexes = prunings[target]['keep']
 
         for regex in regexes.keys():
             keepcount = regexes[regex]
