@@ -107,11 +107,13 @@ def command_prune(params):
 
             keep += matches
 
+        keep = set(keep)
+        subvolumes = set(subvolumes)
+        subvolumes_to_delete = subvolumes - keep
+
         if show_kept:
             for subvolume in sorted(keep):
                 print('# keeping ' + subvolume)
-
-        subvolumes_to_delete = set(subvolumes) - set(keep)
 
         # sort set so oldest subvolumes are deleted first
         # -> more time to press Ctrl+C ;)
