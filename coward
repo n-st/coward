@@ -83,9 +83,13 @@ def command_prune(params):
         if target not in prunings.keys():
             raise Exception('The prune target \'%s\' does not exist.' % target)
 
+        if target == 'show-kept':  # reserved option name
+            continue
+
         regexes = prunings[target]['keep']
         mountpoint = prunings[target]['mountpoint']
         directory = optional_option(prunings[target], 'dir', '')
+        show_kept = optional_option(prunings, 'show-kept', False)
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -102,6 +106,10 @@ def command_prune(params):
             matches = [x for x in subvolumes if re.search(regex, x)][:keepcount]
 
             keep += matches
+
+        if show_kept:
+            for subvolume in keep:
+                print('# keeping ' + subvolume)
 
         subvolumes_to_delete = set(subvolumes) - set(keep)
 
@@ -317,6 +325,7 @@ def main():
             )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
+    parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
     parser.add_argument('commands', nargs='+')
 
@@ -356,6 +365,9 @@ def main():
                 for cfg_option in config[cfg_command][cfg_target]:
                     if type(config[cfg_command][cfg_target][cfg_option]) is str:
                         config[cfg_command][cfg_target][cfg_option] = config[cfg_command][cfg_target][cfg_option].replace('%=', cfg_target)
+
+    if args.show_kept and 'prune' in config:
+        config['prune']['show-kept'] = True
 
     if args.dump_config:
         import json
