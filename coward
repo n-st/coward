@@ -36,6 +36,13 @@ def remote_btrfs_subvolume_list(server, mountpoint):
     return subvolumes
 
 
+def optional_option(option_dict, option_name, option_default):
+    if option_name in option_dict:
+        return option_dict[option_name]
+    else:
+        return option_default
+
+
 def command_all(params):
     global config
     global simulate
@@ -68,7 +75,7 @@ def command_prune(params):
             raise Exception('The prune target \'%s\' does not exist.' % target)
 
         mountpoint = prunings[target]['mountpoint']
-        directory = prunings[target]['dir']
+        directory = optional_option(prunings[target], 'dir', '')
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -120,25 +127,12 @@ def command_pull(params):
 
         src_server = pull[target]['src-server']
         mountpoint = pull[target]['src-mountpoint']
-        directory = pull[target]['src-dir']
-
-        if 'incremental' in pull[target]:
-            incremental = pull[target]['incremental']
-        else:
-            incremental = False
-
-        if 'include-existing' in pull[target]:
-            include_existing = pull[target]['include-existing']
-        else:
-            include_existing = False
-
-        if 'selection-count' in pull[target]:
-            pullcount = pull[target]['selection-count']
-        else:
-            pullcount = None
-
-        regex = pull[target]['selection-regex']
         dest_path = pull[target]['dest-path']
+        directory = optional_option(pull[target], 'src-dir', '')
+        incremental = option_option(pull[target], 'incremental', False)
+        include_existing = option_option(pull[target], 'include-existing', False)
+        pullcount = option_option(pull[target], 'selection-count', None)
+        regex = optional_option(pull[target], 'selection-regex', '.*')
 
         subvolumes = remote_btrfs_subvolume_list(src_server, mountpoint)
         if directory:
@@ -203,15 +197,12 @@ def command_push(params):
             raise Exception('The push target \'%s\' does not exist.' % target)
 
         mountpoint = push[target]['src-mountpoint']
-        directory = push[target]['src-dir']
-        if 'incremental' in push[target]:
-            incremental = push[target]['incremental']
-        else:
-            incremental = False
-        regex = push[target]['selection-regex']
-        pushcount = push[target]['selection-count']
         dest_server = push[target]['dest-server']
         dest_path = push[target]['dest-path']
+        directory = optional_option(push[target], 'src-dir', '')
+        incremental = optional_option(push[target], 'incremental', False)
+        regex = optional_option(push[target], 'selection-regex', '.*')
+        pushcount = push[target]['selection-count']
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -262,10 +253,7 @@ def command_snapshot(params):
 
         src = snapshots[target]['src']
         dest = snapshots[target]['dest']
-        if 'readonly' in snapshots[target]:
-            readonly = snapshots[target]['readonly']
-        else:
-            readonly = False
+        readonly = optional_option(snapshots[target], 'readonly', False)
 
         exec_cmd = ['btrfs', 'subvolume', 'snapshot']
         if readonly:
