@@ -1,0 +1,164 @@
+# "coward" example config file
+
+# General structure:
+# command names as top-level elements,
+#     target names as second-level elements,
+#         target options below target names
+
+# Assumptions for this example config:
+# The root subvolume contains the following directory structure (including the
+# subvolumes):
+# <root subvolume>          root subvolume, mounted at /btrfs
+# |- @home                  subvolume, mounted at /home
+# |- @rootfs                subvolume, mounted at /
+# `- snapshots              normal directory
+#    |- home                normal directory, will contain snapshots of @home
+#    `- rootfs              normal directory, will contain snapshots of @rootfs
+#
+# Snapshots will be created every eight hours, at 02:00, 08:00, 14:00 and
+# 20:00.
+# Snapshots will be places in the appropriate subdirectory of /btrfs/snapshots
+# and will be named according to their creation time, e.g.
+# 2014-10-06_08:00:01_Mon.
+# Snapshots will be either pushed or pulled from the current system to the
+# remote server backup.example.com (using passwordless key-based authentication
+# via SSH).
+
+
+# Create snapshots of subvolumes.
+# Basically a wrapper around 'btrfs subvolume snapshot [-r] <src> <dest>.
+snapshot:
+
+    rootfs:
+        # Full path to the subvolume of which you want snapshots
+        src:        /btrfs/@rootfs
+
+        # Full path where you want to snapshots to be created, including the snapshot name.
+        # This path is parsed with strftime before passing it the btrfs-progs.
+        dest:       /btrfs/snapshots/rootfs/%F_%T_%a
+
+        # Set to "true" or "1" to create read-only snapshots (required to be able to 'btrfs send' them).
+        # Optional (will default to "false" if omitted).
+        readonly:   true
+
+    home:
+        src:        /btrfs/@home
+        dest:       /btrfs/snapshots/home/%F_%T_%a
+        readonly:   true
+
+# Define rules to automatically delete snapshots
+# (e.g. keep fewer of the older snapshots to save space).
+prune:
+
+    rootfs:
+        # The directory where you have mounted the btrfs subvolume
+        # that contains your snapshots
+        mountpoint:     /btrfs
+
+        # The path relative to <mountpoint> where you keep your snapshots.
+        # coward filters its subvolume list for paths that start with this
+        # string, so the trailing slash is optional, but recommended. (If it is
+        # omitted, something like snapshots/rootfs-of-my-vm would be matched,
+        # too.)
+        # Optional: If you want to include all subvolumes below <mountpoint>,
+        # you can omit this option or set it to an empty string.
+        dir:            snapshots/rootfs/
+
+        # A list of regular expression and the number of matches that should be
+        # kept (starting with the most recent one).
+        # coward will iterate through the regexes you give here and remember
+        # the newest <count> subvolumes that match the regex. After processing
+        # all regexes, it will delete all subvolumes that it has not
+        # remembered.
+        keep:
+
+            # Keep the newest 8 snapshots taken at 8 a.m. (i.e. 8 daily backups)
+            .+_08:.*:           8
+
+            # Keep the newest 9 of the four-hourly snapshots (not counting the
+            # ones from 8 a.m.), i.e. all four-hourly snapshots from the past
+            # three days.
+            .+_(02|14|20):.*:   9
+
+            # Keep 9 "weekly" backups (taken at 8 a.m. on Tuesdays)
+            .+_08:..:.._Tue.*:                         9
+
+            # Keep everything that was created at 8 a.m. on a Tuesday during
+            # the first seven days of a month. This will occur exactly once per
+            # month, so we will keep (practically) all monthly backups.
+            \d{4}-\d{2}-0[1-7]_08:\d{2}:\d{2}_Tue:    999
+
+    # You could repeat the same here for "home", or you could remove "rootfs/"
+    # from the "dir" specification above and double all keep numbers, but that
+    # might lead to unpleasant effects if rootfs and home snapshots aren't
+    # always created simultaneously or if one of the two snapshots fails.
+
+
+# Send snapshots over the network using 'btrfs send', an SSH connection, and
+# 'btrfs receive'.
+push:
+
+    rootfs:
+        # See <mountpoint> and <dir> in the "prune" section for details on
+        # these two.
+        src-mountpoint:     /btrfs
+        src-dir:            snapshots/rootfs/
+
+        # Only consider snapshots whose path (relative to <src-mountpoint>)
+        # matches this regex.
+        # Optional: If this option is omitted, all snapshots are considered.
+        #selection-regex:    .+
+
+        # Only copy the newest <count> snapshots.
+        # Optional: If this option is omitted, all snapshots are considered.
+        #selection-count:    1
+
+        # Use "btrfs send"'s "-p" switch to only send the differences between a
+        # snapshot and its immediate predecessor (determined by sorting them
+        # alphabetically).
+        # If the predecessor isn't present at the destination, "btrfs send"
+        # will fail and coward will abort.
+        # Optional: Defaults to false.
+        incremental:        true
+
+        # List the contents of the remote destination before copying and only
+        # copy snapshots that do not exist at the destination.
+        # Since this requires an additional SSH connection and possibly
+        # additional privileges on the destination server, this is *disabled*
+        # by default.
+        # Optional: Defaults to false.
+        exclude-existing:   true
+
+        # The hostname or IP of the destination server.
+        # Since coward just calls "ssh", you can use anything understood by
+        # your ssh binary (e.g. aliases from your ~/.ss/config).
+        dest-server:        backup.example.com
+
+        # Full path on the destination where the snapshots should be stored.
+        dest-path:          /mnt/btr-backup/snapshots/test/
+
+    # Add a similar block here to also push "home".
+    # You can't mix snapshots of different subvolumes in one target when using
+    # incremental copies, since the contents of (e.g.) home and rootfs won't
+    # match and the incremental copy will fail.
+
+
+# Connect to a remote server, list and copy (some of) its snapshots via 'btrfs
+# send' and 'btrfs receive'.
+pull:
+
+    rootfs:
+        # Most options are similar to those of "push" (with the "src-"/"dest-"
+        # prefixes swapped).
+        src-server:         backup.example.com
+        src-mountpoint:     /mnt/btr-backup
+        src-dir:            snapshots/test2/
+        #selection-regex:    .+
+        #selection-count:    1
+        incremental:        true
+        dest-path:          /btrfs/snapshots/test2/
+
+        # The only exception to the rule: "exclude-existing" is *enabled* by
+        # default, since the existence check can be done locally and thus
+        # doesn't have as much overhead as it has with the "push" command.
+        #exclude-existing:   false
