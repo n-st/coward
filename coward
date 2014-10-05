@@ -293,7 +293,7 @@ def main():
 
     simulate = args.simulate
     if simulate:
-        print('Simulation mode. These are the commands that would have been run (if any):')
+        print('# Simulation mode. These are the commands that would have been run (if any):')
 
     # begin actual work
     for command in commands:
