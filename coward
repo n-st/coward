@@ -108,7 +108,7 @@ def command_prune(params):
             keep += matches
 
         if show_kept:
-            for subvolume in keep:
+            for subvolume in sorted(keep):
                 print('# keeping ' + subvolume)
 
         subvolumes_to_delete = set(subvolumes) - set(keep)
