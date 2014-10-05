@@ -153,7 +153,7 @@ def command_pull(params):
             subvolumes_to_pull = subvolumes_to_pull[:(pullcount+1)]
 
         # oldest first
-        subvolumes.sort()
+        subvolumes_to_pull.sort()
 
         # The first element is now either the "reference-only" snapshot or else the only snapshot to be transferred.
         # Determine which and set the start index accordingly:
