@@ -316,6 +316,7 @@ def main():
                 If no targets are specified, all targets for the selected command are processed.''')
             )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
+    parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
     parser.add_argument('commands', nargs='+')
 
@@ -355,6 +356,11 @@ def main():
                 for cfg_option in config[cfg_command][cfg_target]:
                     if type(config[cfg_command][cfg_target][cfg_option]) is str:
                         config[cfg_command][cfg_target][cfg_option] = config[cfg_command][cfg_target][cfg_option].replace('%=', cfg_target)
+
+    if args.dump_config:
+        import json
+        print(json.dumps(config, indent=4))
+        sys.exit(0)
 
     simulate = args.simulate
     if simulate:
