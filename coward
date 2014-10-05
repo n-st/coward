@@ -121,16 +121,23 @@ def command_pull(params):
         src_server = pull[target]['src-server']
         mountpoint = pull[target]['src-mountpoint']
         directory = pull[target]['src-dir']
+
         if 'incremental' in pull[target]:
             incremental = pull[target]['incremental']
         else:
             incremental = False
+
         if 'include-existing' in pull[target]:
             include_existing = pull[target]['include-existing']
         else:
             include_existing = False
+
+        if 'selection-count' in pull[target]:
+            pullcount = pull[target]['selection-count']
+        else:
+            pullcount = None
+
         regex = pull[target]['selection-regex']
-        pullcount = pull[target]['selection-count']
         dest_path = pull[target]['dest-path']
 
         subvolumes = remote_btrfs_subvolume_list(src_server, mountpoint)
@@ -140,7 +147,10 @@ def command_pull(params):
         subvolumes.sort(reverse=True)
 
         # keep one more subvolume than <pullcount> as a -p reference for incremental copying
-        subvolumes_to_pull = [x for x in subvolumes if re.search(regex, x)][:(pullcount+1)]
+        subvolumes_to_pull = [x for x in subvolumes if re.search(regex, x)]
+
+        if pullcount:
+            subvolumes_to_pull = subvolumes_to_pull[:(pullcount+1)]
 
         # if incremental copying is disabled and there is only one snapshot, allow sending that one
         # in all other cases, ignore the last snapshot since it is only included as a -p reference
