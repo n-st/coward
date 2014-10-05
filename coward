@@ -125,6 +125,10 @@ def command_pull(params):
             incremental = pull[target]['incremental']
         else:
             incremental = False
+        if 'include-existing' in pull[target]:
+            include_existing = pull[target]['include-existing']
+        else:
+            include_existing = False
         regex = pull[target]['selection-regex']
         pullcount = pull[target]['selection-count']
         dest_path = pull[target]['dest-path']
@@ -146,6 +150,13 @@ def command_pull(params):
 
         for i in range(max_index):
             subvolume = subvolumes_to_pull[i]
+
+            # skip if the current subvolume already exists in dest_path
+            # (unless include_existing is set)
+            subvolume_basename = os.path.basename(subvolume)
+            if not include_existing and os.path.exists(os.path.join(dest_path, subvolume_basename)):
+                continue
+
             remote_cmd = 'btrfs send '
             if incremental:
                 remote_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_pull[i+1]) + ' '
