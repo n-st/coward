@@ -38,7 +38,7 @@ def remote_btrfs_subvolume_list(server, mountpoint):
 
 
 def remote_ls(server, path):
-    exec_cmd = ['ssh', server, 'ls ' + mountpoint]
+    exec_cmd = ['ssh', server, 'ls ' + path]
     output = subprocess.check_output(exec_cmd, stderr=subprocess.STDOUT)
 
     return output.splitlines()
