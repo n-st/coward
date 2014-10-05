@@ -145,7 +145,7 @@ def command_pull(params):
             subvolume = subvolumes_to_pull[i]
             remote_cmd = 'btrfs send '
             if incremental:
-                remote_cmd += '-p ' + subvolumes_to_pull[i+1] + ' '
+                remote_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_pull[i+1]) + ' '
             remote_cmd += os.path.join(mountpoint, subvolume)
             exec_cmd = 'ssh %s "%s" | btrfs receive %s' % (src_server, remote_cmd, dest_path)
 
@@ -201,7 +201,7 @@ def command_push(params):
             subvolume = subvolumes_to_push[i]
             exec_cmd = 'btrfs send '
             if incremental:
-                exec_cmd += '-p ' + subvolumes_to_push[i+1] + ' '
+                exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i+1]) + ' '
             exec_cmd += os.path.join(mountpoint, subvolume) + \
                     ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
 
