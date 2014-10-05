@@ -36,6 +36,13 @@ def remote_btrfs_subvolume_list(server, mountpoint):
     return subvolumes
 
 
+def remote_ls(server, path):
+    exec_cmd = ['ssh', server, 'ls ' + mountpoint]
+    output = subprocess.check_output(exec_cmd, stderr=subprocess.STDOUT)
+
+    return output.splitlines()
+
+
 def optional_option(option_dict, option_name, option_default):
     if option_name in option_dict:
         return option_dict[option_name]
@@ -130,7 +137,10 @@ def command_pull(params):
         dest_path = pull[target]['dest-path']
         directory = optional_option(pull[target], 'src-dir', '')
         incremental = optional_option(pull[target], 'incremental', False)
+
+        # Note the inverted logic (include vs. exclude) in contrast to command_push.
         include_existing = optional_option(pull[target], 'include-existing', False)
+
         pullcount = optional_option(pull[target], 'selection-count', None)
         regex = optional_option(pull[target], 'selection-regex', '.*')
 
@@ -201,8 +211,19 @@ def command_push(params):
         dest_path = push[target]['dest-path']
         directory = optional_option(push[target], 'src-dir', '')
         incremental = optional_option(push[target], 'incremental', False)
+
+        # Note the inverted logic (exclude vs. include) in contrast to command_pull.
+        # Reasoning behind this: Checking for existing snapshots locally is effortless,
+        # but listing a remote directory requires an additional SSH connection and
+        # perhaps additional privileges on the remote system.
+        exclude_existing = optional_option(push[target], 'exclude-existing', False)
+
         pushcount = optional_option(push[target], 'selection-count', None)
         regex = optional_option(push[target], 'selection-regex', '.*')
+
+        if exclude_existing:
+            existing = remote_ls(dest_server, dest_path)
+            existing = [basename(x) for x in existing]
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -229,6 +250,10 @@ def command_push(params):
 
         for i in range(start_index, max_index):
             subvolume = subvolumes_to_push[i]
+
+            if exclude_existing and basename(subvolume) in existing:
+                continue
+
             exec_cmd = 'btrfs send '
             if incremental:
                 exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i-1]) + ' '
