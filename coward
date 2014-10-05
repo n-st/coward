@@ -152,13 +152,18 @@ def command_pull(params):
         if pullcount:
             subvolumes_to_pull = subvolumes_to_pull[:(pullcount+1)]
 
-        # if incremental copying is disabled and there is only one snapshot, allow sending that one
-        # in all other cases, ignore the last snapshot since it is only included as a -p reference
-        max_index = len(subvolumes_to_pull) - 1
-        if max_index == 0 and not incremental:
-            max_index = 1
+        # oldest first
+        subvolumes.sort()
 
-        for i in range(max_index):
+        # The first element is now either the "reference-only" snapshot or else the only snapshot to be transferred.
+        # Determine which and set the start index accordingly:
+        max_index = len(subvolumes_to_pull)
+        if max_index == 1 and not incremental:
+            start_index = 0
+        else:
+            start_index = 1
+
+        for i in range(start_index, max_index):
             subvolume = subvolumes_to_pull[i]
 
             # skip if the current subvolume already exists in dest_path
