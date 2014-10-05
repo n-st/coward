@@ -25,6 +25,28 @@
 # via SSH).
 
 
+# Replace %= with target name in all top-level target options.
+# Optional. Defaults to false.
+# Example:
+#   prune:
+#       rootfs:
+#           mountpoint:     "%="
+#           dir:            snapshots/%=
+#           keep:
+#               .*_%=_.*:   8
+# With resolve-references set to false, these values would be processed literally.
+# With resolve-references set to true, <mountpoint> would be set to "rootfs"
+# (the double quotes around values starting with a % are required by the YAML
+# parser), <dir> would be set to "snapshots/rootfs" and the "keep" regex would
+# be processed just as configured (.*_%=_.*) because it is a second-level (not
+# top-level) option of the "rootfs" target.
+# Enabling resolve-references forces coward to iterate through the entire
+# config (regardless of the command(s) and target(s) selected) and also requires
+# all target specifications to be copied by value instead of reference to avoid
+# side effects.
+#resolve-references: true
+
+
 # Create snapshots of subvolumes.
 # Basically a wrapper around 'btrfs subvolume snapshot [-r] <src> <dest>.
 snapshot:
