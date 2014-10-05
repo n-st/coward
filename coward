@@ -129,9 +129,9 @@ def command_pull(params):
         mountpoint = pull[target]['src-mountpoint']
         dest_path = pull[target]['dest-path']
         directory = optional_option(pull[target], 'src-dir', '')
-        incremental = option_option(pull[target], 'incremental', False)
-        include_existing = option_option(pull[target], 'include-existing', False)
-        pullcount = option_option(pull[target], 'selection-count', None)
+        incremental = optional_option(pull[target], 'incremental', False)
+        include_existing = optional_option(pull[target], 'include-existing', False)
+        pullcount = optional_option(pull[target], 'selection-count', None)
         regex = optional_option(pull[target], 'selection-regex', '.*')
 
         subvolumes = remote_btrfs_subvolume_list(src_server, mountpoint)
