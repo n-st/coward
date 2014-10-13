@@ -351,6 +351,7 @@ def main():
                 Supported commands:
                     all:        Run 'snapshot', 'pull', 'push' and 'prune' for all respective
                                 targets (in this order).
+                    rsync:      Copy files using rsync.
                     snapshot:   Create btrfs snapshots for the specified targets.
                     pull:       Copy snapshots from a remote server using 'btrfs send/receive'
                                 and SSH.
