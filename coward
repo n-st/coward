@@ -12,7 +12,7 @@ from time import strftime
 import textwrap
 
 
-VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push', 'pull']
+VALID_COMMANDS = ['all', 'snapshot', 'prune', 'push', 'pull', 'rsync']
 DEFAULT_CONFIG_FILE = '/etc/coward.yaml'
 
 
@@ -294,6 +294,43 @@ def command_snapshot(params):
         exec_cmd = ['btrfs', 'subvolume', 'snapshot']
         if readonly:
             exec_cmd.append('-r')
+        exec_cmd.append(src)
+        exec_cmd.append(strftime(dest))
+
+        if simulate:
+            print(' '.join(exec_cmd))
+        else:
+            subprocess.check_call(exec_cmd)
+
+
+def command_rsync(params):
+    global config
+    global simulate
+
+    if not 'rsync' in config:
+        raise Exception('The config file doesn\'t contain any rsync targets.')
+
+    rsync_cfg = config['rsync']
+
+    if params:
+        targets = params.split(',')
+    else:
+        targets = rsync_cfg.keys()
+
+    for target in targets:
+        if target not in rsync_cfg.keys():
+            raise Exception('The rsync target \'%s\' does not exist.' % target)
+
+        src = rsync_cfg[target]['src']
+        dest = rsync_cfg[target]['dest']
+        no_default_opts = optional_option(rsync_cfg[target], 'no-default-options', False)
+        options = optional_option(rsync_cfg[target], 'options', '')
+
+        exec_cmd = ['rsync']
+        if not no_default_opts:
+            exec_cmd += ['--archive', '--hard-links', '--inplace', '--delete', '--delete-excluded', '--numeric-ids', '--acls', '--xattrs']
+        if options:
+            exec_cmd += options.split(' ')
         exec_cmd.append(src)
         exec_cmd.append(strftime(dest))
 

@@ -25,6 +25,7 @@
 # via SSH).
 
 
+#resolve-references: true
 # Replace %= with target name in all top-level target options.
 # Optional. Defaults to false.
 # Example:
@@ -44,7 +45,33 @@
 # config (regardless of the command(s) and target(s) selected) and also requires
 # all target specifications to be copied by value instead of reference to avoid
 # side effects.
-#resolve-references: true
+
+
+# Copy files using rsync.
+rsync:
+
+    offsite:
+        # Source path (passed directly to rsync)
+        src:        remote.example.com:/backupable/
+
+        # Destination path (parsed with strftime, then passed on to rsync)
+        dest:       /btrfs/snapshots/offsite/
+
+        # Do not use "CoW-aware" rsync options.
+        # If set to "true" or "1", coward will add the following options to the
+        # rsync call: --archive --hard-links --inplace --delete
+        # --delete-excluded --numeric-ids --acls --xattrs
+        # These options are useful to copy data into a btrfs subvolume without
+        # breaking its copy-on-write features (e.g. space savings because only
+        # the blocks that changed since the last snapshot are stored
+        # separately).
+        # Optional (will default to "false" if omitted).
+        no-default-options:   false
+
+        # These options will be passed directly to rsync (regardless of
+        # no-default-options).
+        # Optional (can be omitted).
+        options:    --exclude=/tmp/ --exclude=/var/cache/apt/archives/
 
 
 # Create snapshots of subvolumes.
@@ -67,6 +94,7 @@ snapshot:
         src:        /btrfs/@home
         dest:       /btrfs/snapshots/home/%F_%T_%a
         readonly:   true
+
 
 # Define rules to automatically delete snapshots
 # (e.g. keep fewer of the older snapshots to save space).
