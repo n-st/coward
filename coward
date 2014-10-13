@@ -120,9 +120,10 @@ def command_prune(params):
         for subvolume in sorted(subvolumes_to_delete):
             exec_cmd = ['btrfs', 'subvolume', 'delete', os.path.join(mountpoint, subvolume)]
 
-            if simulate:
+            if simulate or verbose:
                 print(' '.join(exec_cmd))
-            else:
+
+            if not simulate:
                 subprocess.check_call(exec_cmd)
 
 
@@ -191,9 +192,10 @@ def command_pull(params):
             remote_cmd += os.path.join(mountpoint, subvolume)
             exec_cmd = 'ssh %s "%s" | btrfs receive %s' % (src_server, remote_cmd, dest_path)
 
-            if simulate:
+            if simulate or verbose:
                 print(exec_cmd)
-            else:
+
+            if not simulate:
                 subprocess.check_call(exec_cmd, shell=True)
 
 
@@ -263,9 +265,10 @@ def command_push(params):
             exec_cmd += os.path.join(mountpoint, subvolume) + \
                     ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
 
-            if simulate:
+            if simulate or verbose:
                 print(exec_cmd)
-            else:
+
+            if not simulate:
                 subprocess.check_call(exec_cmd, shell=True)
 
 
@@ -297,9 +300,10 @@ def command_snapshot(params):
         exec_cmd.append(src)
         exec_cmd.append(strftime(dest))
 
-        if simulate:
+        if simulate or verbose:
             print(' '.join(exec_cmd))
-        else:
+
+        if not simulate:
             subprocess.check_call(exec_cmd)
 
 
@@ -334,15 +338,17 @@ def command_rsync(params):
         exec_cmd.append(src)
         exec_cmd.append(strftime(dest))
 
-        if simulate:
+        if simulate or verbose:
             print(' '.join(exec_cmd))
-        else:
+
+        if not simulate:
             subprocess.check_call(exec_cmd)
 
 
 def main():
     global config
     global simulate
+    global verbose
 
     parser = argparse.ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -364,6 +370,7 @@ def main():
                 If no targets are specified, all targets for the selected command are processed.''')
             )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Print all commands before executing them.")
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
@@ -417,6 +424,8 @@ def main():
     simulate = args.simulate
     if simulate:
         print('# Simulation mode. These are the commands that would have been run (if any):')
+
+    verbose = args.verbose
 
     # begin actual work
     for command in commands:
