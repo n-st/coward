@@ -59,6 +59,7 @@ def command_all(params):
     if params:
         raise Exception('The command \'all\' does not expect any parameters, but got \'%s\'.' % str(params))
 
+    command_rsync(None)
     command_snapshot(None)
     command_pull(None)
     command_push(None)
@@ -355,8 +356,8 @@ def main():
             description='coward: automate btrfs backups\nRequires root privileges (to run btrfs-progs).',
             epilog=textwrap.dedent('''\
                 Supported commands:
-                    all:        Run 'snapshot', 'pull', 'push' and 'prune' for all respective
-                                targets (in this order).
+                    all:        Run 'rsync', 'snapshot', 'pull', 'push' and 'prune' for all
+                                respective targets (in this order).
                     rsync:      Copy files using rsync.
                     snapshot:   Create btrfs snapshots for the specified targets.
                     pull:       Copy snapshots from a remote server using 'btrfs send/receive'
