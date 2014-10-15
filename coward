@@ -199,9 +199,9 @@ def command_pull(params):
             remote_cmd += os.path.join(mountpoint, subvolume)
             if show_progress:
                 if sys.stdout.isatty() and cmd_exists('pv'):
-                    progress_cmd += ' pv |'
+                    progress_cmd = ' pv |'
                 else:
-                    progress_cmd += ' dd |'
+                    progress_cmd = ' dd |'
             else:
                 progress_cmd = ''
             exec_cmd = 'ssh %s "%s" |%s btrfs receive %s' % (src_server, remote_cmd, progress_cmd, dest_path)
