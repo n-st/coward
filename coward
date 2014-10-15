@@ -45,6 +45,11 @@ def remote_ls(server, path):
     return output.splitlines()
 
 
+def cmd_exists(cmd):
+    return subprocess.call("type " + cmd, shell=True, \
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
+
+
 def optional_option(option_dict, option_name, option_default):
     if option_name in option_dict:
         return option_dict[option_name]
@@ -131,6 +136,7 @@ def command_prune(params):
 def command_pull(params):
     global config
     global simulate
+    global show_progress
 
     if not 'pull' in config:
         raise Exception('The config file doesn\'t contain any pull targets.')
@@ -191,7 +197,14 @@ def command_pull(params):
             if incremental:
                 remote_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_pull[i-1]) + ' '
             remote_cmd += os.path.join(mountpoint, subvolume)
-            exec_cmd = 'ssh %s "%s" | btrfs receive %s' % (src_server, remote_cmd, dest_path)
+            if show_progress:
+                if sys.stdout.isatty() and cmd_exists('pv'):
+                    progress_cmd += ' pv |'
+                else:
+                    progress_cmd += ' dd |'
+            else:
+                progress_cmd = ''
+            exec_cmd = 'ssh %s "%s" |%s btrfs receive %s' % (src_server, remote_cmd, progress_cmd, dest_path)
 
             if simulate or verbose:
                 print(exec_cmd)
@@ -203,6 +216,7 @@ def command_pull(params):
 def command_push(params):
     global config
     global simulate
+    global show_progress
 
     if not 'push' in config:
         raise Exception('The config file doesn\'t contain any push targets.')
@@ -263,8 +277,13 @@ def command_push(params):
             exec_cmd = 'btrfs send '
             if incremental:
                 exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i-1]) + ' '
-            exec_cmd += os.path.join(mountpoint, subvolume) + \
-                    ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
+            exec_cmd += os.path.join(mountpoint, subvolume)
+            if show_progress:
+                if sys.stdout.isatty() and cmd_exists('pv'):
+                    exec_cmd += ' | pv'
+                else:
+                    exec_cmd += ' | dd'
+            exec_cmd += ' | ssh ' + dest_server + ' "btrfs receive ' + dest_path + '"'
 
             if simulate or verbose:
                 print(exec_cmd)
@@ -311,6 +330,7 @@ def command_snapshot(params):
 def command_rsync(params):
     global config
     global simulate
+    global show_progress
 
     if not 'rsync' in config:
         raise Exception('The config file doesn\'t contain any rsync targets.')
@@ -332,6 +352,8 @@ def command_rsync(params):
         options = optional_option(rsync_cfg[target], 'options', '')
 
         exec_cmd = ['rsync']
+        if show_progress:
+            exec_cmd += ['--progress']
         if not no_default_opts:
             exec_cmd += ['--archive', '--hard-links', '--inplace', '--delete', '--delete-excluded', '--numeric-ids', '--acls', '--xattrs']
         if options:
@@ -350,6 +372,7 @@ def main():
     global config
     global simulate
     global verbose
+    global show_progress
 
     parser = argparse.ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -372,6 +395,7 @@ def main():
             )
     parser.add_argument("--config", "-c", help="Specify the path to an alternate config file. By default, /etc/coward.yaml is used.")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print all commands before executing them.")
+    parser.add_argument("--progress", "-p", action="store_true", help="Prints progress information while transfering data (for rsync, pull and push).")
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
@@ -427,6 +451,7 @@ def main():
         print('# Simulation mode. These are the commands that would have been run (if any):')
 
     verbose = args.verbose
+    show_progress = args.progress
 
     # begin actual work
     for command in commands:
