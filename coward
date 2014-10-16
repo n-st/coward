@@ -362,11 +362,13 @@ def command_rsync(params):
         exec_cmd.append(src)
         exec_cmd.append(strftime(dest))
 
-        if simulate or verbose:
-            print(' '.join(exec_cmd))
+        for i in xrange(tries):
+            if simulate or verbose:
+                print(' '.join(exec_cmd))
 
-        if not simulate:
-            for i in xrange(tries):
+            if simulate:
+                break
+            else:
                 try:
                     subprocess.check_call(exec_cmd)
                     break
