@@ -73,6 +73,16 @@ rsync:
         # Optional (can be omitted).
         options:    --exclude=/tmp/ --exclude=/var/cache/apt/archives/
 
+        # Start rsync up to <n> times if it fails.
+        # This is useful when rsyncing files that are prone to change: rsync
+        # might fail on the first try because some files have vanished, but
+        # with "tries: 2", it will be executed a second time and likely succeed
+        # this time.
+        # If the n-th try (e.g. 2nd in the example above or 1st with the
+        # default setting) fails, coward will raise an exception and terminate.
+        # Optional (defaults to 1 when omitted).
+        tries:    2
+
 
 # Create snapshots of subvolumes.
 # Basically a wrapper around 'btrfs subvolume snapshot [-r] <src> <dest>.

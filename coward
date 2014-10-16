@@ -350,6 +350,7 @@ def command_rsync(params):
         dest = rsync_cfg[target]['dest']
         no_default_opts = optional_option(rsync_cfg[target], 'no-default-options', False)
         options = optional_option(rsync_cfg[target], 'options', '')
+        tries = optional_option(rsync_cfg[target], 'tries', 1)
 
         exec_cmd = ['rsync']
         if show_progress:
@@ -365,7 +366,15 @@ def command_rsync(params):
             print(' '.join(exec_cmd))
 
         if not simulate:
-            subprocess.check_call(exec_cmd)
+            for i in xrange(tries):
+                try:
+                    subprocess.check_call(exec_cmd)
+                    break
+                except:
+                    # only pass on the exception (and terminate the program) if
+                    # the maximum number of retries has been reached
+                    if i == tries - 1:
+                        raise
 
 
 def main():
