@@ -81,28 +81,28 @@ def command_prune(params):
             return
         raise Exception('The config file doesn\'t contain any prune targets.')
 
-    prunings = config['prune']
+    prune_cfg = config['prune']
 
     if list_targets:
-        print('  prune:' + ','.join(prunings.keys()))
+        print('  prune:' + ','.join(prune_cfg.keys()))
         return
 
     if params:
         targets = params.split(',')
     else:
-        targets = prunings.keys()
+        targets = prune_cfg.keys()
 
     for target in targets:
-        if target not in prunings.keys():
+        if target not in prune_cfg.keys():
             raise Exception('The prune target \'%s\' does not exist.' % target)
 
         if target == 'show-kept':  # reserved option name
             continue
 
-        regexes = prunings[target]['keep']
-        mountpoint = prunings[target]['mountpoint']
-        directory = optional_option(prunings[target], 'dir', '')
-        show_kept = optional_option(prunings, 'show-kept', False)
+        regexes = prune_cfg[target]['keep']
+        mountpoint = prune_cfg[target]['mountpoint']
+        directory = optional_option(prune_cfg[target], 'dir', '')
+        show_kept = optional_option(prune_cfg, 'show-kept', False)
 
         subvolumes = btrfs_subvolume_list(mountpoint)
         if directory:
@@ -151,29 +151,29 @@ def command_pull(params):
             return
         raise Exception('The config file doesn\'t contain any pull targets.')
 
-    pull = config['pull']
+    pull_cfg = config['pull']
 
     if list_targets:
-        print('  pull:' + ','.join(pull.keys()))
+        print('  pull:' + ','.join(pull_cfg.keys()))
         return
 
     if params:
         targets = params.split(',')
     else:
-        targets = pull.keys()
+        targets = pull_cfg.keys()
 
     for target in targets:
-        if target not in pull.keys():
+        if target not in pull_cfg.keys():
             raise Exception('The pull target \'%s\' does not exist.' % target)
 
-        src_server = pull[target]['src-server']
-        mountpoint = pull[target]['src-mountpoint']
-        dest_path = pull[target]['dest-path']
-        directory = optional_option(pull[target], 'src-dir', '')
-        incremental = optional_option(pull[target], 'incremental', False)
-        exclude_existing = optional_option(pull[target], 'exclude-existing', True)
-        pullcount = optional_option(pull[target], 'selection-count', None)
-        regex = optional_option(pull[target], 'selection-regex', '.*')
+        src_server = pull_cfg[target]['src-server']
+        mountpoint = pull_cfg[target]['src-mountpoint']
+        dest_path = pull_cfg[target]['dest-path']
+        directory = optional_option(pull_cfg[target], 'src-dir', '')
+        incremental = optional_option(pull_cfg[target], 'incremental', False)
+        exclude_existing = optional_option(pull_cfg[target], 'exclude-existing', True)
+        pullcount = optional_option(pull_cfg[target], 'selection-count', None)
+        regex = optional_option(pull_cfg[target], 'selection-regex', '.*')
 
         subvolumes = remote_btrfs_subvolume_list(src_server, mountpoint)
         if directory:
@@ -238,29 +238,29 @@ def command_push(params):
             return
         raise Exception('The config file doesn\'t contain any push targets.')
 
-    push = config['push']
+    push_cfg = config['push']
 
     if list_targets:
-        print('  push:' + ','.join(push.keys()))
+        print('  push:' + ','.join(push_cfg.keys()))
         return
 
     if params:
         targets = params.split(',')
     else:
-        targets = push.keys()
+        targets = push_cfg.keys()
 
     for target in targets:
-        if target not in push.keys():
+        if target not in push_cfg.keys():
             raise Exception('The push target \'%s\' does not exist.' % target)
 
-        mountpoint = push[target]['src-mountpoint']
-        dest_server = push[target]['dest-server']
-        dest_path = push[target]['dest-path']
-        directory = optional_option(push[target], 'src-dir', '')
-        incremental = optional_option(push[target], 'incremental', False)
-        exclude_existing = optional_option(push[target], 'exclude-existing', False)
-        pushcount = optional_option(push[target], 'selection-count', None)
-        regex = optional_option(push[target], 'selection-regex', '.*')
+        mountpoint = push_cfg[target]['src-mountpoint']
+        dest_server = push_cfg[target]['dest-server']
+        dest_path = push_cfg[target]['dest-path']
+        directory = optional_option(push_cfg[target], 'src-dir', '')
+        incremental = optional_option(push_cfg[target], 'incremental', False)
+        exclude_existing = optional_option(push_cfg[target], 'exclude-existing', False)
+        pushcount = optional_option(push_cfg[target], 'selection-count', None)
+        regex = optional_option(push_cfg[target], 'selection-regex', '.*')
 
         if exclude_existing:
             existing = remote_ls(dest_server, dest_path)
@@ -323,24 +323,24 @@ def command_snapshot(params):
             return
         raise Exception('The config file doesn\'t contain any snapshot targets.')
 
-    snapshots = config['snapshot']
+    snapshot_cfg = config['snapshot']
 
     if list_targets:
-        print('  snapshot:' + ','.join(snapshots.keys()))
+        print('  snapshot:' + ','.join(snapshot_cfg.keys()))
         return
 
     if params:
         targets = params.split(',')
     else:
-        targets = snapshots.keys()
+        targets = snapshot_cfg.keys()
 
     for target in targets:
-        if target not in snapshots.keys():
+        if target not in snapshot_cfg.keys():
             raise Exception('The snapshot target \'%s\' does not exist.' % target)
 
-        src = snapshots[target]['src']
-        dest = snapshots[target]['dest']
-        readonly = optional_option(snapshots[target], 'readonly', False)
+        src = snapshot_cfg[target]['src']
+        dest = snapshot_cfg[target]['dest']
+        readonly = optional_option(snapshot_cfg[target], 'readonly', False)
 
         exec_cmd = ['btrfs', 'subvolume', 'snapshot']
         if readonly:
