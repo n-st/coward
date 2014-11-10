@@ -445,8 +445,8 @@ def main():
     parser.add_argument("--progress", "-p", action="store_true", help="Prints progress information while transfering data (for rsync, pull and push).")
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
-    parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
-    parser.add_argument("--list", "-l", action="store_true", help="Show a list of all targets for the given command(s) (or all commands if the command \'all\' is given).")
+    parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don't actually run them.")
+    parser.add_argument("--list", "-l", action="store_true", help="Show a list of all targets for the given command(s) (or all commands if the command 'all' is given).")
     parser.add_argument('commands', nargs='+')
 
     args = parser.parse_args()
