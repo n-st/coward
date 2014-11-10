@@ -73,12 +73,19 @@ def command_all(params):
 
 def command_prune(params):
     global config
+    global list_targets
     global simulate
 
     if not 'prune' in config:
+        if list_targets:
+            return
         raise Exception('The config file doesn\'t contain any prune targets.')
 
     prunings = config['prune']
+
+    if list_targets:
+        print('  prune:' + ','.join(prunings.keys()))
+        return
 
     if params:
         targets = params.split(',')
@@ -135,13 +142,20 @@ def command_prune(params):
 
 def command_pull(params):
     global config
+    global list_targets
     global simulate
     global show_progress
 
     if not 'pull' in config:
+        if list_targets:
+            return
         raise Exception('The config file doesn\'t contain any pull targets.')
 
     pull = config['pull']
+
+    if list_targets:
+        print('  pull:' + ','.join(pull.keys()))
+        return
 
     if params:
         targets = params.split(',')
@@ -215,13 +229,20 @@ def command_pull(params):
 
 def command_push(params):
     global config
+    global list_targets
     global simulate
     global show_progress
 
     if not 'push' in config:
+        if list_targets:
+            return
         raise Exception('The config file doesn\'t contain any push targets.')
 
     push = config['push']
+
+    if list_targets:
+        print('  push:' + ','.join(push.keys()))
+        return
 
     if params:
         targets = params.split(',')
@@ -294,12 +315,19 @@ def command_push(params):
 
 def command_snapshot(params):
     global config
+    global list_targets
     global simulate
 
     if not 'snapshot' in config:
+        if list_targets:
+            return
         raise Exception('The config file doesn\'t contain any snapshot targets.')
 
     snapshots = config['snapshot']
+
+    if list_targets:
+        print('  snapshot:' + ','.join(snapshots.keys()))
+        return
 
     if params:
         targets = params.split(',')
@@ -329,13 +357,20 @@ def command_snapshot(params):
 
 def command_rsync(params):
     global config
+    global list_targets
     global simulate
     global show_progress
 
     if not 'rsync' in config:
+        if list_targets:
+            return
         raise Exception('The config file doesn\'t contain any rsync targets.')
 
     rsync_cfg = config['rsync']
+
+    if list_targets:
+        print('  rsync:' + ','.join(rsync_cfg.keys()))
+        return
 
     if params:
         targets = params.split(',')
@@ -381,6 +416,7 @@ def command_rsync(params):
 
 def main():
     global config
+    global list_targets
     global simulate
     global verbose
     global show_progress
@@ -410,6 +446,7 @@ def main():
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don\'t actually run them.")
+    parser.add_argument("--list", "-l", action="store_true", help="Show a list of all targets for the given command(s) (or all commands if the command \'all\' is given).")
     parser.add_argument('commands', nargs='+')
 
     args = parser.parse_args()
@@ -456,6 +493,10 @@ def main():
         import json
         print(json.dumps(config, indent=4))
         sys.exit(0)
+
+    list_targets = args.list
+    if list_targets:
+        print('# The following targets have been defined in the configuration file:')
 
     simulate = args.simulate
     if simulate:
