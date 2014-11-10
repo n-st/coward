@@ -167,6 +167,13 @@ def command_pull(params):
         if target not in pull_cfg.keys():
             raise Exception('The pull target \'%s\' does not exist.' % target)
 
+        if target == 'bootstrap':  # reserved option name
+            continue
+
+        bootstrap = optional_option(pull_cfg, 'bootstrap', False)
+        if not bootstrap:
+            bootstrap = optional_option(pull_cfg[target], 'bootstrap', False)
+
         src_server = pull_cfg[target]['src-server']
         mountpoint = pull_cfg[target]['src-mountpoint']
         dest_path = pull_cfg[target]['dest-path']
@@ -191,10 +198,14 @@ def command_pull(params):
         # oldest first
         subvolumes_to_pull.sort()
 
-        # The first element is now either the "reference-only" snapshot or else the only snapshot to be transferred.
+        # The first element is now either the "reference-only" snapshot or else
+        # the only snapshot to be transferred.
+        # We can therefore skip the first element, unless [it is the only one
+        # and we're not copying incrementally] or [we're bootstrapping our
+        # incremental copy by copying the first element non-incrementally].
         # Determine which and set the start index accordingly:
         max_index = len(subvolumes_to_pull)
-        if max_index == 1 and not incremental:
+        if (max_index == 1 and not incremental) or bootstrap:
             start_index = 0
         else:
             start_index = 1
@@ -209,7 +220,8 @@ def command_pull(params):
                 continue
 
             remote_cmd = 'btrfs send '
-            if incremental:
+            # even with `incremental`, don't send incrementally if this is our "bootstrapping" first element
+            if incremental and not (bootstrap and i == 0):
                 remote_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_pull[i-1]) + ' '
             remote_cmd += os.path.join(mountpoint, subvolume)
             if show_progress:
@@ -446,6 +458,7 @@ def main():
     parser.add_argument("--progress", "-p", action="store_true", help="Prints progress information while transfering data (for rsync, pull and push).")
     parser.add_argument("--dump-config", "-d", action="store_true", help="Dump the config after reading and parsing it, then terminate.")
     parser.add_argument("--show-kept", "-k", action="store_true", help="With the 'prune' command, print a list of snapshots that have been kept.")
+    parser.add_argument("--bootstrap", "-b", action="store_true", help="With the 'pull' command, transfers the first parent snapshot non-incrementally if it isn't present in the destination directory. (The incremental transfer would fail otherwise.)")
     parser.add_argument("--simulate", "-s", "--dry-run", action="store_true", help="Show the commands that would be executed, but don't actually run them.")
     parser.add_argument("--list", "-l", action="store_true", help="Show a list of all targets for the given command(s) (or all commands if the command 'all' is given).")
     parser.add_argument('commands', nargs='+')
@@ -489,6 +502,9 @@ def main():
 
     if args.show_kept and 'prune' in config:
         config['prune']['show-kept'] = True
+
+    if args.bootstrap and 'pull' in config:
+        config['pull']['bootstrap'] = True
 
     if args.dump_config:
         import json
