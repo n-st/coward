@@ -266,6 +266,13 @@ def command_push(params):
         if target not in push_cfg.keys():
             raise Exception('The push target \'%s\' does not exist.' % target)
 
+        if target == 'bootstrap':  # reserved option name
+            continue
+
+        bootstrap = optional_option(push_cfg, 'bootstrap', False)
+        if not bootstrap:
+            bootstrap = optional_option(push_cfg[target], 'bootstrap', False)
+
         mountpoint = push_cfg[target]['src-mountpoint']
         dest_server = push_cfg[target]['dest-server']
         dest_path = push_cfg[target]['dest-path']
@@ -294,10 +301,14 @@ def command_push(params):
         # oldest first
         subvolumes_to_push.sort()
 
-        # The first element is now either the "reference-only" snapshot or else the only snapshot to be transferred.
+        # The first element is now either the "reference-only" snapshot or else
+        # the only snapshot to be transferred.
+        # We can therefore skip the first element, unless [it is the only one
+        # and we're not copying incrementally] or [we're bootstrapping our
+        # incremental copy by copying the first element non-incrementally].
         # Determine which and set the start index accordingly:
         max_index = len(subvolumes_to_push)
-        if max_index == 1 and not incremental:
+        if (max_index == 1 and not incremental) or bootstrap:
             start_index = 0
         else:
             start_index = 1
@@ -309,7 +320,9 @@ def command_push(params):
                 continue
 
             exec_cmd = 'btrfs send '
-            if incremental:
+            # even with `incremental`, don't send incrementally if this is our
+            # "bootstrapping" first element
+            if incremental and not (bootstrap and i == 0):
                 exec_cmd += '-p ' + os.path.join(mountpoint, subvolumes_to_push[i-1]) + ' '
             exec_cmd += os.path.join(mountpoint, subvolume)
             if show_progress:
@@ -505,6 +518,9 @@ def main():
 
     if args.bootstrap and 'pull' in config:
         config['pull']['bootstrap'] = True
+
+    if args.bootstrap and 'push' in config:
+        config['push']['bootstrap'] = True
 
     if args.dump_config:
         import json
